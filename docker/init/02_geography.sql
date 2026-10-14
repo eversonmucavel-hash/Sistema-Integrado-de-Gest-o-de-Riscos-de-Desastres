@@ -1,0 +1,3 @@
+﻿CREATE TABLE IF NOT EXISTS provinces ( id SERIAL PRIMARY KEY, name VARCHAR(100) UNIQUE NOT NULL, code VARCHAR(10) );
+CREATE TABLE IF NOT EXISTS districts ( id SERIAL PRIMARY KEY, province_id INT REFERENCES provinces(id), name VARCHAR(100) NOT NULL, geom GEOMETRY(MultiPolygon, 4326) );
+CREATE TABLE IF NOT EXISTS administrative_posts ( id SERIAL PRIMARY KEY, district_id INT REFERENCES districts(id), name VARCHAR(100) NOT NULL );

@@ -1,0 +1,1 @@
+﻿CREATE TABLE IF NOT EXISTS resources ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), name VARCHAR(200) NOT NULL, category VARCHAR(100), quantity INT DEFAULT 0, unit VARCHAR(50), shelter_id UUID REFERENCES shelters(id), created_at TIMESTAMPTZ DEFAULT NOW() );

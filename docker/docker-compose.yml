@@ -1,0 +1,71 @@
+
+
+
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: sigrd_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sigrd_db
+      POSTGRES_USER: sigrd_user
+      POSTGRES_PASSWORD: sigrd_password_2024
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sigrd_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sigrd_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sigrd_network
+
+  mongodb:
+    image: mongo:6
+    container_name: sigrd_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: sigrd_admin
+      MONGO_INITDB_ROOT_PASSWORD: sigrd_mongo_2024
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - sigrd_network
+
+  geoserver:
+    image: kartoza/geoserver:2.23.0
+    container_name: sigrd_geoserver
+    restart: unless-stopped
+    environment:
+      GEOSERVER_ADMIN_USER: admin
+      GEOSERVER_ADMIN_PASSWORD: geoserver2024
+      INITIAL_MEMORY: 512M
+      MAXIMUM_MEMORY: 1G
+    ports:
+      - "8080:8080"
+    volumes:
+      - geoserver_data:/opt/geoserver/data_dir
+    networks:
+      - sigrd_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  mongo_data:
+  geoserver_data:
+
+networks:
+  sigrd_network:
+    driver: bridge

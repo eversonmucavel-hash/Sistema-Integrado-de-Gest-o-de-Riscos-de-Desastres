@@ -1,0 +1,2 @@
+﻿CREATE TABLE IF NOT EXISTS weather_stations ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), name VARCHAR(200), district_id INT REFERENCES districts(id), latitude DOUBLE PRECISION, longitude DOUBLE PRECISION );
+CREATE TABLE IF NOT EXISTS weather_readings ( id BIGSERIAL PRIMARY KEY, station_id UUID REFERENCES weather_stations(id), temperature DOUBLE PRECISION, humidity DOUBLE PRECISION, rainfall DOUBLE PRECISION, wind_speed DOUBLE PRECISION, reading_at TIMESTAMPTZ DEFAULT NOW() );

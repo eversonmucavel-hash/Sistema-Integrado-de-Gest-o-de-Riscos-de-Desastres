@@ -1,0 +1,1 @@
+﻿CREATE TABLE IF NOT EXISTS teams ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), name VARCHAR(200) NOT NULL, district_id INT REFERENCES districts(id), members INT DEFAULT 0, status VARCHAR(20) DEFAULT 'disponivel', created_at TIMESTAMPTZ DEFAULT NOW() );

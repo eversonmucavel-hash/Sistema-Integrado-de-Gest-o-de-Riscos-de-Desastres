@@ -1,0 +1,1 @@
+﻿CREATE TABLE IF NOT EXISTS users ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), name VARCHAR(200) NOT NULL, email VARCHAR(200) UNIQUE NOT NULL, password_hash TEXT NOT NULL, role VARCHAR(50) DEFAULT 'operador' CHECK (role IN ('admin','operador','visualizador')), province_id INT REFERENCES provinces(id), is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW() );

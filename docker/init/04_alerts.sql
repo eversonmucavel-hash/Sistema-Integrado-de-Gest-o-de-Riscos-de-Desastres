@@ -1,0 +1,1 @@
+﻿CREATE TABLE IF NOT EXISTS alerts ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), title VARCHAR(200) NOT NULL, description TEXT, severity VARCHAR(20) CHECK (severity IN ('verde','amarelo','laranja','vermelho')), district_id INT REFERENCES districts(id), is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW() );

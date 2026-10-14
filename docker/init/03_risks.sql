@@ -1,0 +1,2 @@
+﻿CREATE TABLE IF NOT EXISTS risk_types ( id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, color VARCHAR(20) );
+CREATE TABLE IF NOT EXISTS risk_zones ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), district_id INT REFERENCES districts(id), risk_type_id INT REFERENCES risk_types(id), level VARCHAR(20) CHECK (level IN ('baixo','medio','alto','critico')), geom GEOMETRY(MultiPolygon, 4326), created_at TIMESTAMPTZ DEFAULT NOW() );

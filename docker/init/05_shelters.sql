@@ -1,0 +1,1 @@
+﻿CREATE TABLE IF NOT EXISTS shelters ( id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), name VARCHAR(200) NOT NULL, district_id INT REFERENCES districts(id), capacity INT NOT NULL, occupied INT DEFAULT 0, latitude DOUBLE PRECISION, longitude DOUBLE PRECISION, geom GEOMETRY(Point, 4326), status VARCHAR(20) DEFAULT 'ativo', created_at TIMESTAMPTZ DEFAULT NOW() );
