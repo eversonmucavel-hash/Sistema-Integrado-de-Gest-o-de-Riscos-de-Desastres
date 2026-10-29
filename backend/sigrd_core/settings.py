@@ -4,6 +4,7 @@ Configurações Django
 """
 import os
 import sys
+import glob
 
 # Forçar UTF-8 no Windows
 os.environ['PYTHONIOENCODING'] = 'utf-8'
@@ -12,25 +13,14 @@ os.environ['PGCLIENTENCODING'] = 'UTF8'
 # Fix para Windows
 if sys.platform == 'win32':
     import locale
-    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-
-import os
-import sys
-from pathlib import Path
-
-# Adicionar Library\bin ao PATH (Windows + Conda)
-CONDA_LIB_BIN = r'C:\Users\everson\miniconda3\envs\sigrd\Library\bin'
-if CONDA_LIB_BIN not in os.environ['PATH']:
-    os.environ['PATH'] = CONDA_LIB_BIN + os.pathsep + os.environ['PATH']
-if hasattr(os, 'add_dll_directory'):
-    os.add_dll_directory(CONDA_LIB_BIN)
+    try:
+        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+    except locale.Error:
+        pass # Ignora se o locale não existir no sistema
 
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
-import os
-
-
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -38,11 +28,38 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ============================================
+# GEODJANGO - Configuração para Conda (Windows)
+# ============================================
+import os
+
+CONDA_LIB_BIN = r'C:\Users\everson\miniconda3\envs\sigrd\Library\bin'
+
+# Adicionar ao PATH para que o Python encontre as dependências da DLL
+if CONDA_LIB_BIN not in os.environ['PATH']:
+    os.environ['PATH'] = CONDA_LIB_BIN + os.pathsep + os.environ['PATH']
+if hasattr(os, 'add_dll_directory'):
+    try:
+        os.add_dll_directory(CONDA_LIB_BIN)
+    except OSError:
+        pass
+
+# O NOME EXATO É 'gdal.dll'
+GDAL_LIBRARY_PATH = os.path.join(CONDA_LIB_BIN, 'gdal.dll')
+
+# GEOS (normalmente tem este nome no Conda)
+GEOS_LIBRARY_PATH = os.path.join(CONDA_LIB_BIN, 'geos_c.dll')
+
+# PROJ
+PROJ_LIB = os.path.join(CONDA_LIB_BIN, '..', 'share', 'proj')
+if os.path.exists(PROJ_LIB):
+    os.environ['PROJ_LIB'] = PROJ_LIB
+
+# ============================================
 # SEGURANÇA
 # ============================================
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-insecure-change-me')
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = ['*']
 
 # ============================================
 # APLICAÇÕES INSTALADAS
@@ -69,6 +86,7 @@ INSTALLED_APPS = [
 
     # Apps SIGRD
     'accounts',
+    'citizens', 
     'geography',
     'risks',
     'alerts',
@@ -205,12 +223,15 @@ SPECTACULAR_SETTINGS = {
 # CORS
 # ============================================
 CORS_ALLOWED_ORIGINS = [
+    "http://192.168.201.198:9000",
     "http://localhost:3000",
     "http://localhost:5173",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    "http://localhost",
+    "capacitor://localhost",
 ]
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 # ============================================
 # CELERY
@@ -221,6 +242,10 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Africa/Maputo'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_TASK_ALWAYS_EAGER = False
 
 # ============================================
 # CACHE (Redis)
@@ -232,24 +257,19 @@ CACHES = {
     }
 }
 
-
-
-
 # ============================================
-# GEODJANGO - Bibliotecas Nativas (Windows + Conda)
+# SMS BACKEND
 # ============================================
-import os
-from pathlib import Path
+SMS_BACKEND = os.getenv('SMS_BACKEND', 'console')
+TEXTBEE_API_KEY = os.getenv('TEXTBEE_API_KEY', '')
+TEXTBEE_DEVICE_ID = os.getenv('TEXTBEE_DEVICE_ID', '')
+TEXTBELT_API_KEY = os.getenv('TEXTBELT_API_KEY', 'textbelt')
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
+TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER', '')
 
-CONDA_LIB_BIN = r'C:\Users\everson\miniconda3\envs\sigrd\Library\bin'
-
-# GDAL
-GDAL_LIBRARY_PATH = os.path.join(CONDA_LIB_BIN, 'gdal.dll')
-
-# GEOS
-GEOS_LIBRARY_PATH = os.path.join(CONDA_LIB_BIN, 'geos_c.dll')
-
-# PROJ
-PROJ_LIB = os.path.join(CONDA_LIB_BIN, '..', 'share', 'proj')
-if os.path.exists(PROJ_LIB):
-    os.environ['PROJ_LIB'] = PROJ_LIB
+CSRF_TRUSTED_ORIGINS = [
+    "http://192.168.189.198:9000",
+    "http://localhost",
+    "capacitor://localhost",
+]

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SIGRD</string>
+    <string name="title_activity_main">SIGRD</string>
+    <string name="package_name">mz.gov.sigrd.app</string>
+    <string name="custom_url_scheme">mz.gov.sigrd.app</string>
+</resources>

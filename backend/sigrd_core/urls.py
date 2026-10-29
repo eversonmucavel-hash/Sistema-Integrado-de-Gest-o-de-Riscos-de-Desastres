@@ -33,6 +33,7 @@ urlpatterns = [
     # API - Apps
     path('api/geography/', include('geography.urls')),
     path('api/risks/', include('risks.urls')),
+    path('api/citizens/', include('citizens.urls')),
     path('api/incidents/', include('incidents.urls')),
     path('api/alerts/', include('alerts.urls')),
     path('api/shelters/', include('shelters.urls')),

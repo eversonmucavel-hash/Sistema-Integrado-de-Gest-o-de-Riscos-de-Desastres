@@ -18,12 +18,12 @@ router.register(r'users', UserViewSet, basename='user')
 router.register(r'profiles', ProfileViewSet, basename='profile')
 
 urlpatterns = [
-    # Autenticação JWT (com email)
+    # Autenticação JWT
     path('login/', CustomTokenObtainPairView.as_view(), name='auth-login'),
     path('refresh/', TokenRefreshView.as_view(), name='auth-refresh'),
     path('verify/', TokenVerifyView.as_view(), name='auth-verify'),
 
-    # Autenticação
+    # Registo e perfil
     path('register/', RegisterView.as_view(), name='register'),
     path('me/', MeView.as_view(), name='me'),
     path('change_password/', ChangePasswordView.as_view(), name='change-password'),

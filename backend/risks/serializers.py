@@ -29,6 +29,7 @@ class AreaRiscoSerializer(serializers.ModelSerializer):
             'distrito', 'distrito_nome', 'provincia_nome',
             'tipo_risco', 'tipo_risco_nome',
             'nivel_risco', 'probabilidade', 'impacto',
+            'geometria',
             'area_m2', 'perimetro_m',
             'populacao_exposta', 'familias_expostas',
             'escolas_em_risco', 'centros_saude_em_risco', 'habitacoes_em_risco',
@@ -36,13 +37,34 @@ class AreaRiscoSerializer(serializers.ModelSerializer):
             'ativo', 'created_at', 'updated_at',
         ]
 
+    def _calcular_medidas(self, instance):
+        """Calcula area e perimetro da geometria em metros."""
+        if instance.geometria:
+            geom = instance.geometria.clone()
+            geom.transform(3857)  # projeta para metros
+            instance.area_m2 = geom.area
+            instance.perimetro_m = geom.length
+            instance.save(update_fields=['area_m2', 'perimetro_m'])
+
+    def create(self, validated_data):
+        instance = super().create(validated_data)
+        self._calcular_medidas(instance)
+        return instance
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        self._calcular_medidas(instance)
+        return instance
 
 class AreaRiscoGeoSerializer(GeoFeatureModelSerializer):
-    """Serializer com geometria (GeoJSON)"""
+    """Serializer com geometria (GeoJSON) — usado para mapas"""
     class Meta:
         model = AreaRisco
         geo_field = 'geometria'
-        fields = ['id', 'nome_area', 'nivel_risco', 'populacao_exposta', 'tipo_risco']
+        fields = [
+            'id', 'nome_area', 'nivel_risco', 'populacao_exposta',
+            'tipo_risco', 'distrito',
+        ]
 
 
 class AreaSeguraSerializer(serializers.ModelSerializer):
@@ -53,6 +75,7 @@ class AreaSeguraSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'nome', 'descricao', 'tipo',
             'distrito', 'distrito_nome',
+            'geometria',                          # ← ADICIONADO
             'capacidade_pessoas', 'acessibilidade',
             'tem_agua_potavel', 'tem_energia', 'tem_comunicacao', 'tem_saneamento',
             'latitude', 'longitude',
@@ -77,6 +100,7 @@ class RotaEvacuacaoSerializer(serializers.ModelSerializer):
             'id', 'nome', 'descricao',
             'distrito', 'distrito_nome',
             'area_origem', 'area_destino',
+            'geometria',                          # ← ADICIONADO
             'distancia_m', 'tempo_estimado_minutos',
             'largura_media_m', 'tipo_superficie', 'condicao',
             'acessivel_veiculos', 'iluminacao',
@@ -90,4 +114,3 @@ class RotaEvacuacaoGeoSerializer(GeoFeatureModelSerializer):
         model = RotaEvacuacao
         geo_field = 'geometria'
         fields = ['id', 'nome', 'condicao', 'distancia_m', 'tempo_estimado_minutos']
-        

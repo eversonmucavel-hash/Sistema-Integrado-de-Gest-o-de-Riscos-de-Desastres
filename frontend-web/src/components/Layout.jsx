@@ -10,6 +10,7 @@ import {
     Package,
     LogOut,
     ShieldAlert,
+    UserCheck,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -25,6 +26,7 @@ export default function Layout() {
         { path: '/abrigos', label: 'Abrigos', icon: Home },
         { path: '/equipas', label: 'Equipas', icon: Users },
         { path: '/recursos', label: 'Recursos', icon: Package },
+        { path: '/cidadaos', label: 'Cidadãos', icon: UserCheck }, 
     ];
 
     const handleLogout = () => {

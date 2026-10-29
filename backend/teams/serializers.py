@@ -1,6 +1,7 @@
 """
 SIGRD - Serializers da app Teams
 """
+from django.contrib.gis.geos import Point
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import TipoEquipa, EquipaResposta, Missao, RastreamentoGPS
@@ -41,6 +42,20 @@ class EquipaRespostaSerializer(serializers.ModelSerializer):
 
     def get_total_missoes(self, obj):
         return obj.missoes.count()
+
+    def create(self, validated_data):
+        lat = validated_data.get('latitude')
+        lng = validated_data.get('longitude')
+        if lat is not None and lng is not None:
+            validated_data['geometria'] = Point(float(lng), float(lat), srid=4326)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        lat = validated_data.get('latitude', instance.latitude)
+        lng = validated_data.get('longitude', instance.longitude)
+        if lat is not None and lng is not None:
+            validated_data['geometria'] = Point(float(lng), float(lat), srid=4326)
+        return super().update(instance, validated_data)
 
 
 class EquipaRespostaGeoSerializer(GeoFeatureModelSerializer):

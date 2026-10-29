@@ -1,6 +1,8 @@
 """
 SIGRD - Views da app Alerts
 """
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -63,7 +65,78 @@ class AlertaViewSet(viewsets.ModelViewSet):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = AlertaGeoSerializer(queryset, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def enviar_sms(self, request, pk=None):
+        """
+        Dispara o envio de SMS para os destinatários do alerta.
+        Body:
+            {
+                "destinatarios": [
+                    {"numero": "+258840000000", "nome": "João Silva"},
+                    ...
+                ]
+            }
+        """
+        alerta = self.get_object()
+        destinatarios = request.data.get('destinatarios', [])
 
+        if not destinatarios:
+            return Response(
+                {'erro': 'Lista de destinatarios vazia'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Disparar tarefa Celery (assíncrona)
+        from notifications.tasks import enviar_alerta_sms
+        task = enviar_alerta_sms.delay(alerta.id, destinatarios)
+
+        return Response({
+            'mensagem': 'Envio de SMS iniciado em background',
+            'task_id': task.id,
+            'total_destinatarios': len(destinatarios),
+            'alerta_id': alerta.id,
+        }, status=status.HTTP_202_ACCEPTED)
+    @action(detail=True, methods=['post'], url_path='disparar')
+    def disparar(self, request, pk=None):
+        """
+        Dispara o alerta para todos os cidadãos registados na zona.
+        O sistema descobre automaticamente quem avisar com base na
+        geometria do alerta ou nos distritos_alvo.
+
+        Não requer payload.
+        """
+        alerta = self.get_object()
+
+        if alerta.cancelado:
+            return Response(
+                {'erro': 'Nao e possivel disparar um alerta cancelado'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Verificar se tem dados para identificar alvos
+        if not alerta.geometria and not alerta.distritos_alvo:
+            return Response(
+                {
+                    'erro': (
+                        'O alerta nao tem geometria nem distritos_alvo definidos. '
+                        'Defina pelo menos um destes campos.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Disparar tarefa Celery
+        from alerts.tasks import disparar_alerta_zona
+        task = disparar_alerta_zona.delay(alerta.id)
+
+        return Response({
+            'mensagem': 'Envio de alerta iniciado em background',
+            'task_id': task.id,
+            'alerta_id': alerta.id,
+            'tem_geometria': bool(alerta.geometria),
+            'distritos_alvo': alerta.distritos_alvo,
+        }, status=status.HTTP_202_ACCEPTED)
 
 class AlertaEnviadoViewSet(viewsets.ReadOnlyModelViewSet):
     """

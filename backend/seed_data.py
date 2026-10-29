@@ -1,32 +1,54 @@
 """
 SIGRD - Script de povoamento da base de dados
-Executar: python manage.py shell < seed_data.py
+Executar: python seed_data.py
 """
-from django.contrib.gis.geos import Point, Polygon, MultiPolygon, LineString
+import os
+import sys
+import random
 from datetime import datetime, timedelta
 from decimal import Decimal
-import random
-
-print("=" * 60)
-print("SIGRD - A povoar base de dados")
-print("=" * 60)
 
 # ============================================
-# IMPORTS
+# 1. FORÇAR GDAL PRIMEIRO (Antes de importar o Django)
 # ============================================
-from geography.models import Provincia, Distrito
+GDAL_PATH = r'C:\Users\everson\miniconda3\envs\sigrd\Library\bin\gdal.dll'
+if os.path.exists(GDAL_PATH):
+    os.environ['GDAL_LIBRARY_PATH'] = GDAL_PATH
+    GDAL_DIR = os.path.dirname(GDAL_PATH)
+    os.environ['PATH'] = GDAL_DIR + os.pathsep + os.environ['PATH']
+    if hasattr(os, 'add_dll_directory'):
+        try:
+            os.add_dll_directory(GDAL_DIR)
+        except OSError:
+            pass
+
+# ============================================
+# 2. CONFIGURAR O DJANGO
+# ============================================
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sigrd_core.settings')
+import django
+django.setup()
+
+# ============================================
+# 3. IMPORTAR MODELOS (Depois do Django estar pronto)
+# ============================================
+from django.contrib.gis.geos import Point, Polygon
+from geography.models import Distrito
 from risks.models import TipoRisco, AreaRisco, AreaSegura, RotaEvacuacao
 from shelters.models import CategoriaInfraestrutura, Infraestrutura, Abrigo
 from teams.models import TipoEquipa, EquipaResposta
 from resources.models import CategoriaRecurso, Recurso
-from alerts.models import EventoDesastre, Alerta
+from alerts.models import Alerta
 
 # ============================================
-# 0. APAGAR DADOS ANTIGOS (opcional, para idempotência)
+# 0. APAGAR DADOS ANTIGOS
 # ============================================
-print("\n[0/9] A limpar dados antigos...")
+print("=" * 60)
+print("SIGRD - A povoar base de dados")
+print("=" * 60)
+
+print("\n[0/8] A limpar dados antigos...")
 Alerta.objects.all().delete()
-EventoDesastre.objects.all().delete()
 Recurso.objects.all().delete()
 EquipaResposta.objects.all().delete()
 Abrigo.objects.all().delete()
@@ -34,17 +56,63 @@ Infraestrutura.objects.all().delete()
 RotaEvacuacao.objects.all().delete()
 AreaSegura.objects.all().delete()
 AreaRisco.objects.all().delete()
+TipoRisco.objects.all().delete()
+CategoriaInfraestrutura.objects.all().delete()
+CategoriaRecurso.objects.all().delete()
+TipoEquipa.objects.all().delete()
 print("   OK")
+
+# ============================================
+# 0.5. CRIAR CATEGORIAS BASE
+# ============================================
+print("\n[0.5/8] A criar categorias base...")
+
+tipos_risco_data = [
+    {"codigo": "CICLONE", "nome": "Ciclone", "descricao": "Tempestade tropical"},
+    {"codigo": "CHEIA", "nome": "Cheia", "descricao": "Inundação por subida do nível da água"},
+    {"codigo": "SECA", "nome": "Seca", "descricao": "Período prolongado de falta de chuva"},
+    {"codigo": "EROSAO", "nome": "Erosão", "descricao": "Desgaste do solo ou costa"},
+    {"codigo": "TERRAMOTO", "nome": "Terramoto", "descricao": "Abalo sísmico"},
+]
+for tr in tipos_risco_data:
+    TipoRisco.objects.get_or_create(codigo=tr["codigo"], defaults={"nome": tr["nome"], "descricao": tr["descricao"]})
+
+cat_infra_data = [
+    {"codigo": "ESCOLA", "nome": "Escola"},
+    {"codigo": "SAUDE", "nome": "Centro de Saúde"},
+    {"codigo": "AGUA", "nome": "Ponto de Água"},
+    {"codigo": "ENERGIA", "nome": "Energia"},
+]
+for c in cat_infra_data:
+    CategoriaInfraestrutura.objects.get_or_create(codigo=c["codigo"], defaults={"nome": c["nome"]})
+
+cat_recurso_data = [
+    {"codigo": "AGUA", "nome": "Água Potável", "unidade_medida": "litros"},
+    {"codigo": "COMIDA", "nome": "Alimentos", "unidade_medida": "kg"},
+    {"codigo": "KIT_HIGIENE", "nome": "Kit de Higiene", "unidade_medida": "unidades"},
+    {"codigo": "COBERTOR", "nome": "Cobertor", "unidade_medida": "unidades"},
+]
+for cr in cat_recurso_data:
+    CategoriaRecurso.objects.get_or_create(codigo=cr["codigo"], defaults={"nome": cr["nome"], "unidade_medida": cr["unidade_medida"]})
+
+tipos_equipa_data = [
+    {"codigo": "BUSCA_SALVAMENTO", "nome": "Busca e Salvamento"},
+    {"codigo": "SAUDE", "nome": "Saúde"},
+    {"codigo": "AVALIACAO", "nome": "Avaliação"},
+]
+for te in tipos_equipa_data:
+    TipoEquipa.objects.get_or_create(codigo=te["codigo"], defaults={"nome": te["nome"]})
+
+print("   Categorias e tipos base criados/verificados")
 
 # ============================================
 # 1. INFRAESTRUTURAS
 # ============================================
-print("\n[1/9] A criar infraestruturas...")
+print("\n[1/8] A criar infraestruturas...")
 
 cat_escola = CategoriaInfraestrutura.objects.get(codigo='ESCOLA')
 cat_saude = CategoriaInfraestrutura.objects.get(codigo='SAUDE')
 cat_agua = CategoriaInfraestrutura.objects.get(codigo='AGUA')
-cat_energia = CategoriaInfraestrutura.objects.get(codigo='ENERGIA')
 
 beira = Distrito.objects.filter(nome__icontains='Beira').first()
 buzi = Distrito.objects.filter(nome__icontains='Buzi').first() or Distrito.objects.filter(nome__icontains='Búzi').first()
@@ -82,7 +150,7 @@ print(f"   {len(infraestruturas)} infraestruturas criadas")
 # ============================================
 # 2. ABRIGOS
 # ============================================
-print("\n[2/9] A criar abrigos...")
+print("\n[2/8] A criar abrigos...")
 
 abrigos_data = [
     {"nome": "Abrigo Municipal da Beira", "distrito": beira, "lat": -19.8350, "lng": 34.8500, "cap": 500, "tipo": "permanente"},
@@ -115,7 +183,7 @@ print(f"   {len(abrigos_data)} abrigos criados")
 # ============================================
 # 3. ÁREAS DE RISCO
 # ============================================
-print("\n[3/9] A criar áreas de risco...")
+print("\n[3/8] A criar áreas de risco...")
 
 tipo_ciclone = TipoRisco.objects.get(codigo='CICLONE')
 tipo_cheia = TipoRisco.objects.get(codigo='CHEIA')
@@ -123,7 +191,6 @@ tipo_seca = TipoRisco.objects.get(codigo='SECA')
 tipo_erosao = TipoRisco.objects.get(codigo='EROSAO')
 
 def criar_poligono(lat, lng, tamanho=0.05):
-    """Cria um polígono quadrado simples"""
     coords = [
         (lng - tamanho, lat - tamanho),
         (lng + tamanho, lat - tamanho),
@@ -166,7 +233,7 @@ print(f"   {len(areas_risco_data)} áreas de risco criadas")
 # ============================================
 # 4. ÁREAS SEGURAS
 # ============================================
-print("\n[4/9] A criar áreas seguras...")
+print("\n[4/8] A criar áreas seguras...")
 
 areas_seguras_data = [
     {"nome": "Zona Alta da Beira", "distrito": beira, "lat": -19.8200, "lng": 34.8300, "cap": 5000},
@@ -194,7 +261,7 @@ print(f"   {len(areas_seguras_data)} áreas seguras criadas")
 # ============================================
 # 5. EQUIPAS DE RESPOSTA
 # ============================================
-print("\n[5/9] A criar equipas de resposta...")
+print("\n[5/8] A criar equipas de resposta...")
 
 tipo_busca = TipoEquipa.objects.filter(codigo='BUSCA_SALVAMENTO').first()
 tipo_saude = TipoEquipa.objects.filter(codigo='SAUDE').first()
@@ -219,7 +286,7 @@ for idx, eq in enumerate(equipas_data, start=1):
             lider_telefone='+258840000000',
             numero_membros=eq["membros"],
             geometria=Point(eq["lng"], eq["lat"], srid=4326),
-            id_distrito_atuacao=eq["distrito"],
+          #  id_distrito_atuacao=eq["distrito"],
             status='standby',
             ativo=True,
         )
@@ -228,7 +295,7 @@ print(f"   {len(equipas_data)} equipas criadas")
 # ============================================
 # 6. RECURSOS
 # ============================================
-print("\n[6/9] A criar recursos...")
+print("\n[6/8] A criar recursos...")
 
 cat_agua = CategoriaRecurso.objects.get(codigo='AGUA')
 cat_comida = CategoriaRecurso.objects.get(codigo='COMIDA')
@@ -253,7 +320,7 @@ for r in recursos_data:
             nome=r["nome"],
             quantidade_disponivel=Decimal(r["qtd"]),
             unidade_medida=r["unidade"],
-            id_distrito=r["distrito"],
+            #id_distrito=r["distrito"],
             local_armazenamento='Armazém Central',
             doador=r["doador"],
             tipo_doador='Internacional',
@@ -262,64 +329,12 @@ for r in recursos_data:
 print(f"   {len(recursos_data)} recursos criados")
 
 # ============================================
-# 7. EVENTOS DE DESASTRE
+# 7. ALERTAS
 # ============================================
-print("\n[7/9] A criar eventos de desastre...")
-
-evento1 = EventoDesastre.objects.create(
-    codigo_evento='CYC-2026-001',
-    id_tipo_risco=tipo_ciclone,
-    nome='Ciclone Freddy (Simulação)',
-    descricao='Ciclone tropical de categoria 4 que afetou a zona centro',
-    categoria='4',
-    intensidade='extrema',
-    data_inicio=datetime.now() - timedelta(days=30),
-    data_fim=datetime.now() - timedelta(days=25),
-    ativo=False,
-    nivel_alerta='vermelho',
-    estado_resposta='recuperacao',
-    pessoas_afetadas=150000,
-    pessoas_deslocadas=25000,
-    mortes=50,
-    feridos=200,
-    habitacoes_destruidas=5000,
-    habitacoes_danificadas=15000,
-    coordenador_responsavel='Coordenador Nacional INGD',
-    cenoe_ativado=True,
-    fonte_informacao='INAM',
-)
-
-evento2 = EventoDesastre.objects.create(
-    codigo_evento='CHE-2026-001',
-    id_tipo_risco=tipo_cheia,
-    nome='Cheias na Bacia do Búzi',
-    descricao='Cheias sazonais devido a chuvas intensas',
-    intensidade='alta',
-    data_inicio=datetime.now() - timedelta(days=10),
-    ativo=True,
-    nivel_alerta='laranja',
-    estado_resposta='emergencia',
-    pessoas_afetadas=30000,
-    pessoas_deslocadas=5000,
-    mortes=5,
-    feridos=20,
-    habitacoes_destruidas=500,
-    habitacoes_danificadas=2000,
-    coordenador_responsavel='Coordenador Provincial Sofala',
-    cenoe_ativado=True,
-    fonte_informacao='INAM',
-)
-
-print("   2 eventos criados")
-
-# ============================================
-# 8. ALERTAS
-# ============================================
-print("\n[8/9] A criar alertas...")
+print("\n[7/8] A criar alertas...")
 
 alerta1 = Alerta.objects.create(
-    id_evento=evento2,
-    id_tipo_risco=tipo_cheia,
+    tipo_risco=tipo_cheia,   # <--- ADICIONE ESTA LINHA
     titulo='Alerta Laranja - Cheias na Bacia do Búzi',
     mensagem='Devido às chuvas intensas dos últimos dias, o nível do rio Búzi subiu para níveis críticos. População das zonas baixas deve evacuar imediatamente para zonas altas.',
     nivel='urgente',
@@ -336,8 +351,7 @@ alerta1 = Alerta.objects.create(
 )
 
 alerta2 = Alerta.objects.create(
-    id_evento=evento2,
-    id_tipo_risco=tipo_cheia,
+    tipo_risco=tipo_cheia,   # <--- ADICIONE ESTA LINHA
     titulo='Alerta Amarelo - Precipitação em Sofala',
     mensagem='Previsão de chuva intensa nas próximas 24h. População deve manter-se alerta.',
     nivel='atencao',
@@ -351,18 +365,16 @@ alerta2 = Alerta.objects.create(
 )
 
 print("   2 alertas criados")
-
 # ============================================
-# 9. RESUMO
+# 8. RESUMO
 # ============================================
-print("\n[9/9] Resumo final:")
+print("\n[8/8] Resumo final:")
 print(f"   Infraestruturas:  {Infraestrutura.objects.count()}")
 print(f"   Abrigos:          {Abrigo.objects.count()}")
 print(f"   Áreas de Risco:   {AreaRisco.objects.count()}")
 print(f"   Áreas Seguras:    {AreaSegura.objects.count()}")
 print(f"   Equipas:          {EquipaResposta.objects.count()}")
 print(f"   Recursos:         {Recurso.objects.count()}")
-print(f"   Eventos:          {EventoDesastre.objects.count()}")
 print(f"   Alertas:          {Alerta.objects.count()}")
 
 print("\n" + "=" * 60)

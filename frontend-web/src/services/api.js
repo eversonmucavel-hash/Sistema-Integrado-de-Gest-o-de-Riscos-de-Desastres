@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = '/api';
+const API_URL = 'http://localhost:9000/api';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -53,3 +53,9 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+    // Envio de SMS
+    enviarSMS: (alertaId, destinatarios) =>
+        api.post(`/alerts/alertas/${alertaId}/enviar_sms/`, {
+            destinatarios,
+        })

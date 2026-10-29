@@ -3,6 +3,27 @@
 import os
 import sys
 
+# ============================================
+# FORÇAR GDAL NO WINDOWS (ANTES DO DJANGO CARREGAR)
+# ============================================
+# O nome exato do ficheiro que encontrámos na pasta do Conda é 'gdal.dll'
+GDAL_PATH = r'C:\Users\everson\miniconda3\envs\sigrd\Library\bin\gdal.dll'
+
+if os.path.exists(GDAL_PATH):
+    # Define a variável de ambiente que o Django lê
+    os.environ['GDAL_LIBRARY_PATH'] = GDAL_PATH
+    
+    # Adiciona a pasta bin ao PATH para o Windows encontrar as dependências da DLL
+    GDAL_DIR = os.path.dirname(GDAL_PATH)
+    os.environ['PATH'] = GDAL_DIR + os.pathsep + os.environ['PATH']
+    
+    # Regista a pasta no sistema de DLL do Windows (Python 3.8+)
+    if hasattr(os, 'add_dll_directory'):
+        try:
+            os.add_dll_directory(GDAL_DIR)
+        except OSError:
+            pass
+# ============================================
 
 def main():
     """Run administrative tasks."""

@@ -3,6 +3,7 @@ SIGRD - Serializers da app Shelters
 """
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
+from django.contrib.gis.geos import Point
 from .models import CategoriaInfraestrutura, Infraestrutura, Abrigo
 
 
@@ -72,6 +73,20 @@ class AbrigoSerializer(serializers.ModelSerializer):
 
     def get_vagas_disponiveis(self, obj):
         return max(0, obj.capacidade_maxima - obj.ocupacao_atual)
+
+    def create(self, validated_data):
+        lat = validated_data.get('latitude')
+        lng = validated_data.get('longitude')
+        if lat is not None and lng is not None:
+            validated_data['geometria'] = Point(float(lng), float(lat), srid=4326)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        lat = validated_data.get('latitude', instance.latitude)
+        lng = validated_data.get('longitude', instance.longitude)
+        if lat is not None and lng is not None:
+            validated_data['geometria'] = Point(float(lng), float(lat), srid=4326)
+        return super().update(instance, validated_data)
 
 
 class AbrigoGeoSerializer(GeoFeatureModelSerializer):
